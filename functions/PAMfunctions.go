@@ -11,8 +11,8 @@ import (
 // 根据资产id和账号名获取密码
 func (J_p *JMSClient) GetSecret(assetID string, account string) (*(models.Secret), error) {
 	url, err := utils.ParseUrl((*J_p).Url+"/api/v1/accounts/integration-applications/account-secret/", map[string]string{
-		"asset":   assetID,
-		"account": account,
+		"asset_id": assetID,
+		"account":  account,
 	})
 	if err != nil {
 		return nil, err
