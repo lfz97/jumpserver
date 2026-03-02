@@ -287,7 +287,7 @@ func CheckoutPassword(JMSClient_p *functions.JMSClient, requestUser string, asse
 			secret := serviceModel.Secret{
 				Account: account,
 			}
-			Secret_p, err := JMSClient_p.GetSecret(asset.Name, account)
+			Secret_p, err := JMSClient_p.GetSecret(asset.ID, account)
 			if err != nil {
 				(*JMSClient_p).Logger_p.Println("查询密码失败，资产ID：" + asset.ID + "，账号：" + account + "，错误信息：" + err.Error())
 				continue
