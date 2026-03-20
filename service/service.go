@@ -254,6 +254,7 @@ func CheckoutPassword(JMSClient_p *functions.JMSClient, requestUser string, asse
 	//获取用户已授权的资产列表
 	AssetList_p, err := JMSClient_p.GetUserAssetsListByUid((*userList_p)[0].ID)
 	if err != nil {
+		(*JMSClient_p).Logger_p.Println("查询用户资产失败，用户ID：" + (*userList_p)[0].ID + "，错误信息：" + err.Error())
 		return nil, errors.New("查询用户资产失败，用户ID：" + (*userList_p)[0].ID + "，错误信息：" + err.Error())
 	}
 
@@ -273,7 +274,10 @@ func CheckoutPassword(JMSClient_p *functions.JMSClient, requestUser string, asse
 		}
 
 	}
-
+	(*JMSClient_p).Logger_p.Println("以下资产不在用户的授权范围，禁止申请密码：")
+	for _, asset := range PwdCanNotBeCheckout {
+		(*JMSClient_p).Logger_p.Println("资产ID："+asset.ID+"，资产名称："+asset.Name, ", 资产IP："+asset.Address)
+	}
 	//获取密码
 	SecretInfoList := []serviceModel.SecretInfo{}
 	for _, asset := range PwdCanBeCheckout {
