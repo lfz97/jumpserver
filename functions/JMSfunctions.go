@@ -363,3 +363,37 @@ func (J_p *JMSClient) UpdatePermission(config PermissionConfig, permissionID str
 	}
 	return &Result, nil
 }
+
+// 获取资产特定账号信息，assetid为资产id，username为账号名
+func (J_p *JMSClient) GetSpecifiedAccount(assetid string, username string) (*(models.AccountList), error) {
+
+	url, err := utils.ParseUrl((*J_p).Url+"/api/v1/accounts/accounts/", map[string]string{
+		"asset_id": assetid,
+		"username": username,
+	})
+	if err != nil {
+		return nil, err
+	}
+	headers := map[string]string{
+		"Content-Type": "application/json",
+	}
+	res_p, err := (*J_p).JMSClient_p.R().SetHeaders(headers).Get(url)
+	if err != nil {
+		return nil, err
+	}
+	if res_p.StatusCode() != 200 {
+		return nil, errors.New("查询资产特定账号失败，状态码：" + strconv.Itoa(res_p.StatusCode()))
+	}
+	AccountList := models.AccountList{}
+	var accounts []models.Account
+	if err := json.Unmarshal(res_p.Body(), &accounts); err == nil {
+		AccountList.Count = len(accounts)
+		AccountList.Results = accounts
+	} else if err := json.Unmarshal(res_p.Body(), &AccountList); err != nil {
+		return nil, err
+	}
+	if AccountList.Count == 0 {
+		return nil, errors.New("未查询到此账号——" + username + "@" + assetid)
+	}
+	return &AccountList, nil
+}
