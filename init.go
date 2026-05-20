@@ -12,7 +12,7 @@ func Init(Url string, JMSApiID string, JMSApiSecret string, PAMApiID string, PAM
 	JMSClient_p := resty.New().SetDebug(false)
 	PAMClient_p := resty.New().SetDebug(false)
 
-	//通过SetPreRequestHook在请求前注册一个函数为请求签名
+	//通过SetPreRequestHook,在请求前注册一个函数为请求签名
 	JMSClient_p.SetPreRequestHook(func(client_p *resty.Client, request_p *http.Request) error {
 
 		//jumpserver要求最少date头必须参与签名
