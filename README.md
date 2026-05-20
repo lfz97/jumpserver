@@ -117,7 +117,7 @@ for _, info := range secrets {
 ## 认证与日志
 
 - **认证**：基于 HTTP Signature（`hmac-sha256`），参与签名的头为 `date` 与 `(request-target)`；PAM 请求额外带 `X-Source: jms-pam`。
-- **初始化**：参见 [init.go](init.go)，内部为 JMS 与 PAM 各维护一个 `resty.Client`，均启用 `SetDebug(true)`。
+- **初始化**：参见 [init.go](init.go)，内部为 JMS 与 PAM 各维护一个 `resty.Client`，均启用 `SetDebug(false)`。
 - **日志**：参见 [mylogger/mylogger.go](mylogger/mylogger.go)，日志以“文件 + 标准输出”的方式写入，调用 `Init()` 传入日志文件路径即可。
 
 ## 错误与返回值

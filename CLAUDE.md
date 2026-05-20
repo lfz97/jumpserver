@@ -22,7 +22,7 @@ utils/ + mylogger/ → URL 拼接 + 双写日志（文件+stdout）
 
 - **双客户端**：JMS 和 PAM 各用一个 `resty.Client`，认证 key 不同，通过 `SetPreRequestHook` 自动 HMAC-SHA256 签名
 - **签名头**：`(request-target)` + `date`，PAM 额外带 `X-Source: jms-pam`
-- **resty Debug 常开**：`SetDebug(true)` 在 init 中硬编码，所有请求打印完整 body
+- **resty Debug 常开**：`SetDebug(false)` 在 init 中硬编码，所有请求打印完整 body
 
 ## Gotchas
 

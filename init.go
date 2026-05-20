@@ -9,8 +9,8 @@ import (
 
 // 通过JMS&PAM APIKEY 获取认证client
 func Init(Url string, JMSApiID string, JMSApiSecret string, PAMApiID string, PAMApiSecret string, logfilePath string) (*functions.JMSClient, error) {
-	JMSClient_p := resty.New().SetDebug(true)
-	PAMClient_p := resty.New().SetDebug(true)
+	JMSClient_p := resty.New().SetDebug(false)
+	PAMClient_p := resty.New().SetDebug(false)
 
 	//通过SetPreRequestHook在请求前注册一个函数为请求签名
 	JMSClient_p.SetPreRequestHook(func(client_p *resty.Client, request_p *http.Request) error {
