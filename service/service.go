@@ -9,6 +9,7 @@ import (
 	"github.com/lfz97/jumpserver/models/serviceModel"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -302,4 +303,111 @@ func CheckoutPassword(JMSClient_p *functions.JMSClient, requestUser string, asse
 		SecretInfoList = append(SecretInfoList, SecretInfo)
 	}
 	return SecretInfoList, nil
+}
+
+// ChangeSecretItem 改密任务项
+type ChangeSecretItem struct {
+	AssetID string
+	Account string
+}
+
+// 改密：并发执行，轮询确认密码更新后自动删除改密计划
+func ChangeSecret(JMSClient_p *functions.JMSClient, items []ChangeSecretItem) {
+	(*JMSClient_p).Logger_p.Println("收到改密请求，共 " + strconv.Itoa(len(items)) + " 个账号")
+
+	var wg sync.WaitGroup
+
+	for _, item := range items {
+		wg.Add(1)
+		go func(item ChangeSecretItem) {
+			defer wg.Done()
+			changeSingleSecret(JMSClient_p, item)
+		}(item)
+	}
+
+	// 监听 goroutine：全部完成后退出
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+	<-done
+	(*JMSClient_p).Logger_p.Println("改密请求全部处理完毕")
+}
+
+// 单个账号改密流程
+func changeSingleSecret(JMSClient_p *functions.JMSClient, item ChangeSecretItem) {
+	prefix := item.Account + "@" + item.AssetID
+
+	// 0. 记录当前密码时间
+	oldDateUpdated := ""
+	accountList, err := JMSClient_p.GetSpecifiedAccount(item.AssetID, item.Account)
+	if err != nil {
+		(*JMSClient_p).Logger_p.Println(prefix + " 查询账号失败：" + err.Error())
+		return
+	}
+	if len(accountList.Results) > 0 {
+		oldDateUpdated = accountList.Results[0].DateUpdated
+		(*JMSClient_p).Logger_p.Println(prefix + " 当前密码更新时间：" + oldDateUpdated)
+	} else {
+		(*JMSClient_p).Logger_p.Println(prefix + " 未查询到账号，跳过")
+		return
+	}
+
+	// 1. 创建改密计划
+	randomId := uuid.New().String()
+	req := models.CreateChangeSecretAutomationReq{
+		Name:           "AUTO_CHANGE_SECRET_" + randomId,
+		Accounts:       []string{item.Account},
+		Assets:         []string{item.AssetID},
+		IsActive:       true,
+		IsPeriodic:     false,
+		SecretStrategy: "random",
+		SecretType:     "password",
+		PasswordRules:  map[string]int{"length": 30},
+	}
+
+	automation, err := JMSClient_p.CreateChangeSecretAutomation(req)
+	if err != nil {
+		(*JMSClient_p).Logger_p.Println(prefix + " 创建改密计划失败：" + err.Error())
+		return
+	}
+	(*JMSClient_p).Logger_p.Println(prefix + " 改密计划创建成功，ID：" + automation.ID)
+
+	// 2. 执行改密计划
+	execResult, err := JMSClient_p.ExecuteChangeSecret(automation.ID)
+	if err != nil {
+		(*JMSClient_p).Logger_p.Println(prefix + " 执行改密计划失败：" + err.Error())
+		// 执行失败也要清理
+		JMSClient_p.DeleteChangeSecretAutomation(automation.ID)
+		return
+	}
+	(*JMSClient_p).Logger_p.Println(prefix + " 改密计划执行成功，任务ID：" + execResult.Task)
+
+	// 3. 轮询密码是否更新（最多10次，每次1秒）
+	success := false
+	for i := 0; i < 10; i++ {
+		time.Sleep(1 * time.Second)
+		accountList, err := JMSClient_p.GetSpecifiedAccount(item.AssetID, item.Account)
+		if err != nil {
+			(*JMSClient_p).Logger_p.Println(prefix + " 第" + strconv.Itoa(i+1) + "次查询密码状态失败：" + err.Error())
+			continue
+		}
+		if len(accountList.Results) > 0 && accountList.Results[0].DateUpdated != oldDateUpdated {
+			(*JMSClient_p).Logger_p.Println(prefix + " 密码已更新，新时间：" + accountList.Results[0].DateUpdated)
+			success = true
+			break
+		}
+	}
+	if !success {
+		(*JMSClient_p).Logger_p.Println(prefix + " 轮询超时，密码未确认更新")
+	}
+
+	// 4. 删除改密计划
+	err = JMSClient_p.DeleteChangeSecretAutomation(automation.ID)
+	if err != nil {
+		(*JMSClient_p).Logger_p.Println(prefix + " 删除改密计划失败：" + err.Error())
+	} else {
+		(*JMSClient_p).Logger_p.Println(prefix + " 改密计划已删除，ID：" + automation.ID)
+	}
 }

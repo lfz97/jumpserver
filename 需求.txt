@@ -1,0 +1,80 @@
+#全量账号查询
+
+1. 基于/api/v1/accounts/accounts/这个api，做一个GetALLAccount的方法，功能是获取所有账号信息。做完之后，麻烦做一个单元测试，调一下这个方法。
+  看看是否能获取全量账号（我到时候给你apikey和现有的账号数量），关注点如下：
+    1.账号信息里面有没有账号所在资产类型信息，如主机、数据库
+    2.试试limit参数不传，是全量获取账号，还是有一个默认值？如果有默认值，试一下limit参数最大能写多大，能不能写比如1000000，这样就可以获得所有账号
+
+#改密
+1. 新建一个创建改密计划接口
+    /api/v1/accounts/change-secret-automations/
+    方法：POST
+    body参数：
+    | 参数名 | 类型 | 描述 | 是否必选 | 默认值 |
+    |--------|------|------|----------|--------|
+    | name | String | 名称 | 是 | |
+    | accounts | String[] | 资产账户名 | 是 | |
+    | assets | String[] | 资产ID | 否 | |
+    | nodes | string[] | 资产节点ID | 否 | |
+    | is_active | Boolean | 是否激活 | 是 | |
+    | is_periodic | Boolean | 是否定期执行 | 是 | |
+    | crontab | String | 定期执行crontab表达式 | 否 | is_periodic=true时填写 |
+    | interval | String | 周期执行 | 否 | is_periodic=true时填写，默认24 |
+    | secret_strategy | String | 密文生成策略 | 是 | 默认: 指定specific<br>随机：random |
+    | secret_type | String | 密文类型 | 是 | 默认：password<br>可选值：ssh_key |
+    | password_rules | int | 随机密码长度 | 否 | 默认30<br>secret_strategy=random<br>且secret_type=password时必填 |
+    | secret | String | 密码 | 否 | secret_strateg=specific 且secret_type=password时必填 |
+    | comment | String | 备注 | 否 | |
+
+
+    响应：
+    | 字段名称 | 数据类型 | 字段描述 | 备注 |
+    |--------|------|------|------|
+    | id | String | id | |
+    | name | String | 名称 | |
+    | accounts | String[] | 资产账户名 | |
+    | assets | List[Object] | 资产ID | |
+    | nodes | List[Object] | 资产节点 | |
+    | is_active | Boolean | 是否激活 | |
+    | is_periodic | Boolean | 是否定期执行 | |
+    | crontab | String | 定期执行crontab表达式 | |
+    | interval | String | 周期执行 | |
+    | secret_strategy | String | 密文生成策略 | |
+    | secret_type | Object | 密文类型 | |
+    | secret | String | 密码 | |
+    | password_rules | Object | 随机密码长度 | |
+    | recipients | List[Object] | 收件人 | |
+    | org_id | String | 组织ID | |
+    | org_name | String | 组织名称 | |
+    | comment | String | 备注 | |
+    | date_created | String[date] | 创建时间 | |
+    | date_updated | String[date] | 更新时间 | |
+    | created_by | String | 创建人 | |
+
+2. 新建一个执行改密计划接口
+    /api/v1/accounts/change-secret-executions/
+    方法：POST
+    body参数：
+    | 参数名 | 类型 | 描述 | 是否必选 | 默认值 |
+    |--------|------|------|----------|--------|
+    | automation | String | 改密计划ID | 是 | |
+
+    响应
+
+    | 字段名称 | 数据类型 | 字段描述 | 备注 |
+    |--------|------|------|------|
+    | task | String | 任务id | |
+
+3. 新建一个删除改密计划接口
+    /api/v1/accounts/change-secret-automations/{id}
+    方法 DELETE
+    Query参数
+    | 参数名 | 类型 | 描述 | 是否必选 | 默认值 |
+    |--------|------|------|----------|--------|
+    | id | String | 改密计划ID | 是 | |
+
+    响应：
+
+5. 通过这个以上3个接口实现改密功能，逻辑 新建改密计划（传资产ID和账号，默认是改成随机密码）——执行改密计划——删除改密计划。先分别调用这几个接口把流程跑通，跑通后做一个集成函数在service.go里面
+测试使用的资产id：708cfdbf-a224-4bca-91b7-d660823afcba
+测试使用的资产账号:dominos_liny Ucloud.DBA dominos_alex

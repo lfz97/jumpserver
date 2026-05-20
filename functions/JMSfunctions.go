@@ -397,3 +397,110 @@ func (J_p *JMSClient) GetSpecifiedAccount(assetid string, username string) (*(mo
 	}
 	return &AccountList, nil
 }
+
+// 获取全量账号信息（自动分页拉取）
+func (J_p *JMSClient) GetALLAccount() (*(models.AccountList), error) {
+
+	pageSize := 1000
+	allAccounts := &models.AccountList{}
+	headers := map[string]string{
+		"Content-Type": "application/json",
+	}
+
+	for offset := 0; ; offset += pageSize {
+		url, err := utils.ParseUrl((*J_p).Url+"/api/v1/accounts/accounts/", map[string]string{
+			"limit":  strconv.Itoa(pageSize),
+			"offset": strconv.Itoa(offset),
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		res_p, err := (*J_p).JMSClient_p.R().SetHeaders(headers).Get(url)
+		if err != nil {
+			return nil, err
+		}
+		if res_p.StatusCode() != 200 {
+			return nil, errors.New("查询全量账号失败，状态码：" + strconv.Itoa(res_p.StatusCode()))
+		}
+
+		pageList := models.AccountList{}
+		var accounts []models.Account
+		if err := json.Unmarshal(res_p.Body(), &accounts); err == nil {
+			pageList.Count = len(accounts)
+			pageList.Results = accounts
+		} else if err := json.Unmarshal(res_p.Body(), &pageList); err != nil {
+			return nil, err
+		}
+
+		allAccounts.Results = append(allAccounts.Results, pageList.Results...)
+
+		// 返回条数不足 pageSize，说明已是最后一页
+		if len(pageList.Results) < pageSize {
+			break
+		}
+	}
+
+	allAccounts.Count = len(allAccounts.Results)
+	return allAccounts, nil
+}
+
+// 创建改密计划
+func (J_p *JMSClient) CreateChangeSecretAutomation(req models.CreateChangeSecretAutomationReq) (*models.ChangeSecretAutomation, error) {
+
+	url := (*J_p).Url + "/api/v1/accounts/change-secret-automations/"
+	headers := map[string]string{
+		"Content-Type": "application/json",
+	}
+	res_p, err := (*J_p).JMSClient_p.R().SetHeaders(headers).SetBody(req).Post(url)
+	if err != nil {
+		return nil, err
+	}
+	if res_p.StatusCode() != 201 {
+		return nil, errors.New("创建改密计划失败，状态码：" + strconv.Itoa(res_p.StatusCode()) + "，响应：" + string(res_p.Body()))
+	}
+	var result models.ChangeSecretAutomation
+	if err := json.Unmarshal(res_p.Body(), &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// 执行改密计划
+func (J_p *JMSClient) ExecuteChangeSecret(automationID string) (*models.ExecuteChangeSecretResp, error) {
+
+	url := (*J_p).Url + "/api/v1/accounts/change-secret-executions/"
+	headers := map[string]string{
+		"Content-Type": "application/json",
+	}
+	req := models.ExecuteChangeSecretReq{Automation: automationID}
+	res_p, err := (*J_p).JMSClient_p.R().SetHeaders(headers).SetBody(req).Post(url)
+	if err != nil {
+		return nil, err
+	}
+	if res_p.StatusCode() != 201 {
+		return nil, errors.New("执行改密计划失败，状态码：" + strconv.Itoa(res_p.StatusCode()) + "，响应：" + string(res_p.Body()))
+	}
+	var result models.ExecuteChangeSecretResp
+	if err := json.Unmarshal(res_p.Body(), &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// 删除改密计划
+func (J_p *JMSClient) DeleteChangeSecretAutomation(id string) error {
+
+	url := (*J_p).Url + "/api/v1/accounts/change-secret-automations/" + id + "/"
+	headers := map[string]string{
+		"Content-Type": "application/json",
+	}
+	res_p, err := (*J_p).JMSClient_p.R().SetHeaders(headers).Delete(url)
+	if err != nil {
+		return err
+	}
+	if res_p.StatusCode() != 204 {
+		return errors.New("删除改密计划失败，状态码：" + strconv.Itoa(res_p.StatusCode()) + "，响应：" + string(res_p.Body()))
+	}
+	return nil
+}
