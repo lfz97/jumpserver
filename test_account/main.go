@@ -1,21 +1,19 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 
 	"github.com/lfz97/jumpserver"
-	"github.com/lfz97/jumpserver/service"
 )
 
 func main() {
-	// ========== 配置 ==========
 	url := ""
 	jmsApiID := ""
 	jmsApiSecret := ""
 	pamApiID := ""
 	pamApiSecret := ""
-	// ==========================
 
 	client, err := jumpserver.Init(url, jmsApiID, jmsApiSecret, pamApiID, pamApiSecret, "./test_account.log")
 	if err != nil {
@@ -23,21 +21,29 @@ func main() {
 		os.Exit(1)
 	}
 
-	// ================== 集成测试: ChangeSecret ==================
-	fmt.Println("========== 集成测试: ChangeSecret ==========")
+	baseURL := url + "/api/v1/perms/asset-permissions/"
 
-	items := []service.ChangeSecretItem{
-		// 资产1: 76f416af-044a-458e-85bf-cf375e67779b
-		{AssetID: "76f416af-044a-458e-85bf-cf375e67779b", Account: "Bingo"},
-		{AssetID: "76f416af-044a-458e-85bf-cf375e67779b", Account: "Eva.yin"},
-		{AssetID: "76f416af-044a-458e-85bf-cf375e67779b", Account: "Joly"},
-		// 资产2: a21ac621-fbb3-46c4-9d3c-ec31e152b35a
-		{AssetID: "a21ac621-fbb3-46c4-9d3c-ec31e152b35a", Account: "dominos-tedia-readonly"},
-		{AssetID: "a21ac621-fbb3-46c4-9d3c-ec31e152b35a", Account: "dominos-ops"},
-		{AssetID: "a21ac621-fbb3-46c4-9d3c-ec31e152b35a", Account: "dominos_zfr"},
+	// 加 limit=1 强制分页对象返回
+	tests := []string{
+		"?limit=1&offset=0",
+		"?limit=1&offset=0&is_expired=true",
+		"?limit=1&offset=0&is_expired=false",
 	}
 
-	service.ChangeSecret(client, items)
+	for _, q := range tests {
+		resp, _ := client.JMSClient_p.R().Get(baseURL + q)
 
-	fmt.Println("✅ 改密完成！")
+		firstChar := resp.Body()[0]
+		if firstChar == '[' {
+			var arr []json.RawMessage
+			json.Unmarshal(resp.Body(), &arr)
+			fmt.Printf("%-45s  格式=数组  条数=%d\n", q, len(arr))
+		} else {
+			var result struct {
+				Count int `json:"count"`
+			}
+			json.Unmarshal(resp.Body(), &result)
+			fmt.Printf("%-45s  格式=对象  count=%d\n", q, result.Count)
+		}
+	}
 }

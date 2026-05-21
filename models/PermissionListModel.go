@@ -35,3 +35,10 @@ type Permission struct {
 }
 
 type PermissionList []Permission
+
+type PermissionListPaginated struct {
+	Count    int          `json:"count"`
+	Next     interface{}  `json:"next"`
+	Previous interface{}  `json:"previous"`
+	Results  []Permission `json:"results"`
+}

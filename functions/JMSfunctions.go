@@ -504,3 +504,52 @@ func (J_p *JMSClient) DeleteChangeSecretAutomation(id string) error {
 	}
 	return nil
 }
+
+// 获取全量授权关系（支持筛选参数，自动分页）
+func (J_p *JMSClient) GetALLAssetPermissions(params map[string]string) (*(models.PermissionList), error) {
+
+	pageSize := 1000
+	allPermissions := models.PermissionList{}
+	headers := map[string]string{
+		"Content-Type": "application/json",
+	}
+
+	for offset := 0; ; offset += pageSize {
+		queryParams := make(map[string]string)
+		queryParams["limit"] = strconv.Itoa(pageSize)
+		queryParams["offset"] = strconv.Itoa(offset)
+		for k, v := range params {
+			queryParams[k] = v
+		}
+
+		url, err := utils.ParseUrl((*J_p).Url+"/api/v1/perms/asset-permissions/", queryParams)
+		if err != nil {
+			return nil, err
+		}
+
+		res_p, err := (*J_p).JMSClient_p.R().SetHeaders(headers).Get(url)
+		if err != nil {
+			return nil, err
+		}
+		if res_p.StatusCode() != 200 {
+			return nil, errors.New("查询授权关系失败，状态码：" + strconv.Itoa(res_p.StatusCode()))
+		}
+
+		// 兼容两种返回格式：分页对象 或 数组
+		pageList := models.PermissionListPaginated{}
+		var arr models.PermissionList
+		if err := json.Unmarshal(res_p.Body(), &arr); err == nil {
+			allPermissions = append(allPermissions, arr...)
+			break // 数组格式说明已是全量
+		} else if err := json.Unmarshal(res_p.Body(), &pageList); err == nil {
+			allPermissions = append(allPermissions, pageList.Results...)
+			if len(pageList.Results) < pageSize {
+				break
+			}
+		} else {
+			return nil, err
+		}
+	}
+
+	return &allPermissions, nil
+}

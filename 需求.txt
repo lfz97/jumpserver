@@ -1,80 +1,58 @@
-#全量账号查询
 
-1. 基于/api/v1/accounts/accounts/这个api，做一个GetALLAccount的方法，功能是获取所有账号信息。做完之后，麻烦做一个单元测试，调一下这个方法。
-  看看是否能获取全量账号（我到时候给你apikey和现有的账号数量），关注点如下：
-    1.账号信息里面有没有账号所在资产类型信息，如主机、数据库
-    2.试试limit参数不传，是全量获取账号，还是有一个默认值？如果有默认值，试一下limit参数最大能写多大，能不能写比如1000000，这样就可以获得所有账号
-
-#改密
-1. 新建一个创建改密计划接口
-    /api/v1/accounts/change-secret-automations/
-    方法：POST
-    body参数：
+1. 新建获取授权关系的接口
+    /api/v1/perms/asset-permissions/
+    方法：GET
+    Query参数：
     | 参数名 | 类型 | 描述 | 是否必选 | 默认值 |
-    |--------|------|------|----------|--------|
-    | name | String | 名称 | 是 | |
-    | accounts | String[] | 资产账户名 | 是 | |
-    | assets | String[] | 资产ID | 否 | |
-    | nodes | string[] | 资产节点ID | 否 | |
-    | is_active | Boolean | 是否激活 | 是 | |
-    | is_periodic | Boolean | 是否定期执行 | 是 | |
-    | crontab | String | 定期执行crontab表达式 | 否 | is_periodic=true时填写 |
-    | interval | String | 周期执行 | 否 | is_periodic=true时填写，默认24 |
-    | secret_strategy | String | 密文生成策略 | 是 | 默认: 指定specific<br>随机：random |
-    | secret_type | String | 密文类型 | 是 | 默认：password<br>可选值：ssh_key |
-    | password_rules | int | 随机密码长度 | 否 | 默认30<br>secret_strategy=random<br>且secret_type=password时必填 |
-    | secret | String | 密码 | 否 | secret_strateg=specific 且secret_type=password时必填 |
-    | comment | String | 备注 | 否 | |
+    | :--- | :--- | :--- | :--- | :--- |
+    | search | String | 搜索词 | 否 | |
+    | name | String | 授权规则名称 | 否 | |
+    | node_id | String | 节点 ID | 否 | |
+    | asset_id | String | 资产 ID | 否 | |
+    | asset_name | String | 资产名称 | 否 | |
+    | user_id | String | 用户 ID | 否 | |
+    | username | String | 用户名 | 否 | |
+    | user_group | String | 用户组 | 否 | |
+    | address | String | 资产 IP/HOST | 否 | |
+    | accounts | String | 账号 | 否 | |
+    | is_valid | Int | 有效 | 否 | |
+    | is_effective | Int | 已生效的 | 否 | 默认值：true |
+    | from_ticket | Int | 是否来自工单 | 否 | |
+    | limit | Int | 每一页显示条数 | 否 | |
+    | offset | Int | 分页偏移量 | 否 | |
+
 
 
     响应：
     | 字段名称 | 数据类型 | 字段描述 | 备注 |
-    |--------|------|------|------|
+    | :--- | :--- | :--- | :--- |
+    | count | Int | 总数 | |
+    | next | String | 下一页链接 | |
+    | previous | String | 上一页链接 | |
+    | results | List | 数据 | |
     | id | String | id | |
     | name | String | 名称 | |
-    | accounts | String[] | 资产账户名 | |
-    | assets | List[Object] | 资产ID | |
-    | nodes | List[Object] | 资产节点 | |
-    | is_active | Boolean | 是否激活 | |
-    | is_periodic | Boolean | 是否定期执行 | |
-    | crontab | String | 定期执行crontab表达式 | |
-    | interval | String | 周期执行 | |
-    | secret_strategy | String | 密文生成策略 | |
-    | secret_type | Object | 密文类型 | |
-    | secret | String | 密码 | |
-    | password_rules | Object | 随机密码长度 | |
-    | recipients | List[Object] | 收件人 | |
-    | org_id | String | 组织ID | |
-    | org_name | String | 组织名称 | |
+    | users_amount | Int | 授权用户数 | |
+    | user_groups_amount | Int | 授权用户组数 | |
+    | assets_amount | Int | 授权资产数 | |
+    | nodes_amount | Int | 授权资产节点数 | |
+    | acounts | String[] | 授权账号 | |
+    | actions | Object[] | 操作权限 | |
+    | protocols | String[] | 协议 | |
+    | labels | String[] | 标签 | |
     | comment | String | 备注 | |
-    | date_created | String[date] | 创建时间 | |
-    | date_updated | String[date] | 更新时间 | |
-    | created_by | String | 创建人 | |
+    | is_valid | Boolean | 有效的 | |
+    | is_expired | Boolean | 过期的 | |
+    | is_active | Boolean | 激活状态 | |
+    | from_ticket | Boolean | 来自工单 | |
+    | date_created | String(date-time) | 创建时间 | |
+    | org_id | String | 组织 | |
+    | org_name | String | 组织名称 | |
+    | date_start | String(date-time) | 规则生效开始时间 | |
+    | date_expired | String(date-time) | 规则生效截止时间 | |
 
-2. 新建一个执行改密计划接口
-    /api/v1/accounts/change-secret-executions/
-    方法：POST
-    body参数：
-    | 参数名 | 类型 | 描述 | 是否必选 | 默认值 |
-    |--------|------|------|----------|--------|
-    | automation | String | 改密计划ID | 是 | |
 
-    响应
 
-    | 字段名称 | 数据类型 | 字段描述 | 备注 |
-    |--------|------|------|------|
-    | task | String | 任务id | |
-
-3. 新建一个删除改密计划接口
-    /api/v1/accounts/change-secret-automations/{id}
-    方法 DELETE
-    Query参数
-    | 参数名 | 类型 | 描述 | 是否必选 | 默认值 |
-    |--------|------|------|----------|--------|
-    | id | String | 改密计划ID | 是 | |
-
-    响应：
-
-5. 通过这个以上3个接口实现改密功能，逻辑 新建改密计划（传资产ID和账号，默认是改成随机密码）——执行改密计划——删除改密计划。先分别调用这几个接口把流程跑通，跑通后做一个集成函数在service.go里面
-测试使用的资产id：708cfdbf-a224-4bca-91b7-d660823afcba
-测试使用的资产账号:dominos_liny Ucloud.DBA dominos_alex
+要求：
+1. 接口内部自动实现offset分页查询，保证获取全量数据
+2. 实现完成后，拉取一下 is_valid false 的授权关系清单，我跟你对一下
