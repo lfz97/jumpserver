@@ -32,7 +32,7 @@ utils/ + mylogger/ → URL 拼接 + 双写日志（文件+stdout）
 - **改密 API 状态码**：POST 返回 201，DELETE 返回 204（非 200）
 - **`password_rules` 为对象**：创建改密计划时传 `{"length": 30}`，不能传 int。响应中 `secret_strategy`、`interval`、`crontab` 也是对象
 - **改密异步竞态**：执行是异步的，立刻删除改密计划会级联取消任务。`ChangeSecret` 通过 `GetSpecifiedAccount` 轮询 `DateUpdated`，确认密码更新后才删除（每秒查一次，最多等 10 秒）
-- **`service/ChangeSecret`**：参数为 `[]ChangeSecretItem{AssetID, Account}`，内部 goroutine 并发执行，sync.WaitGroup 等全部完成后返回
+- **`service/ChangeSecret`**：参数为 `[]ChangeSecretItem{AssetID, Account}`，内部 goroutine 并发执行，sync.WaitGroup 等全部完成后返回 `[]ChangeSecretItem`（改密失败的账号列表）
 - **`/api/v1/perms/asset-permissions/`**：不传 limit 默认 200（返回数组），上限 1000（返回分页对象）。`GetALLAssetPermissions(params)` 支持筛选参数 map 并自动分页。`is_expired` 参数未在官方文档列出但实际可用（`true` 生效，`false` 被忽略）
 - **错误信息为中文**：所有 error 返回中文信息，边界判断时注意
 - **用户同名问题**：`GetUserByName` 可能返回多条，service 层会检查唯一性

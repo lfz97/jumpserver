@@ -311,32 +311,37 @@ type ChangeSecretItem struct {
 	Account string
 }
 
-// 改密：并发执行，轮询确认密码更新后自动删除改密计划
-func ChangeSecret(JMSClient_p *functions.JMSClient, items []ChangeSecretItem) {
+// 改密：并发执行，轮询确认密码更新后自动删除改密计划，返回失败的账号列表
+func ChangeSecret(JMSClient_p *functions.JMSClient, items []ChangeSecretItem) []ChangeSecretItem {
 	(*JMSClient_p).Logger_p.Println("收到改密请求，共 " + strconv.Itoa(len(items)) + " 个账号")
 
 	var wg sync.WaitGroup
+	var mu sync.Mutex
+	var failedItems []ChangeSecretItem
 
 	for _, item := range items {
 		wg.Add(1)
 		go func(item ChangeSecretItem) {
 			defer wg.Done()
-			changeSingleSecret(JMSClient_p, item)
+			if !changeSingleSecret(JMSClient_p, item) {
+				mu.Lock()
+				failedItems = append(failedItems, item)
+				mu.Unlock()
+			}
 		}(item)
 	}
 
-	// 监听 goroutine：全部完成后退出
-	done := make(chan struct{})
-	go func() {
-		wg.Wait()
-		close(done)
-	}()
-	<-done
-	(*JMSClient_p).Logger_p.Println("改密请求全部处理完毕")
+	wg.Wait()
+	if len(failedItems) > 0 {
+		(*JMSClient_p).Logger_p.Println("改密请求处理完毕，" + strconv.Itoa(len(failedItems)) + " 个账号改密失败")
+	} else {
+		(*JMSClient_p).Logger_p.Println("改密请求全部处理完毕")
+	}
+	return failedItems
 }
 
-// 单个账号改密流程
-func changeSingleSecret(JMSClient_p *functions.JMSClient, item ChangeSecretItem) {
+// 单个账号改密流程，返回 true 表示成功
+func changeSingleSecret(JMSClient_p *functions.JMSClient, item ChangeSecretItem) bool {
 	prefix := item.Account + "@" + item.AssetID
 
 	// 0. 记录当前密码时间
@@ -344,14 +349,14 @@ func changeSingleSecret(JMSClient_p *functions.JMSClient, item ChangeSecretItem)
 	accountList, err := JMSClient_p.GetSpecifiedAccount(item.AssetID, item.Account)
 	if err != nil {
 		(*JMSClient_p).Logger_p.Println(prefix + " 查询账号失败：" + err.Error())
-		return
+		return false
 	}
 	if len(accountList.Results) > 0 {
 		oldDateUpdated = accountList.Results[0].DateUpdated
 		(*JMSClient_p).Logger_p.Println(prefix + " 当前密码更新时间：" + oldDateUpdated)
 	} else {
 		(*JMSClient_p).Logger_p.Println(prefix + " 未查询到账号，跳过")
-		return
+		return false
 	}
 
 	// 1. 创建改密计划
@@ -370,7 +375,7 @@ func changeSingleSecret(JMSClient_p *functions.JMSClient, item ChangeSecretItem)
 	automation, err := JMSClient_p.CreateChangeSecretAutomation(req)
 	if err != nil {
 		(*JMSClient_p).Logger_p.Println(prefix + " 创建改密计划失败：" + err.Error())
-		return
+		return false
 	}
 	(*JMSClient_p).Logger_p.Println(prefix + " 改密计划创建成功，ID：" + automation.ID)
 
@@ -380,7 +385,7 @@ func changeSingleSecret(JMSClient_p *functions.JMSClient, item ChangeSecretItem)
 		(*JMSClient_p).Logger_p.Println(prefix + " 执行改密计划失败：" + err.Error())
 		// 执行失败也要清理
 		JMSClient_p.DeleteChangeSecretAutomation(automation.ID)
-		return
+		return false
 	}
 	(*JMSClient_p).Logger_p.Println(prefix + " 改密计划执行成功，任务ID：" + execResult.Task)
 
@@ -410,4 +415,5 @@ func changeSingleSecret(JMSClient_p *functions.JMSClient, item ChangeSecretItem)
 	} else {
 		(*JMSClient_p).Logger_p.Println(prefix + " 改密计划已删除，ID：" + automation.ID)
 	}
+	return success
 }
