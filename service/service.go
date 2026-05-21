@@ -384,7 +384,7 @@ func changeSingleSecret(JMSClient_p *functions.JMSClient, item ChangeSecretItem)
 	}
 	(*JMSClient_p).Logger_p.Println(prefix + " 改密计划执行成功，任务ID：" + execResult.Task)
 
-	// 3. 轮询密码是否更新（最多10次，每次1秒）
+	// 3. 轮询密码是否更新（最多10次 ，每次1秒）
 	success := false
 	for i := 0; i < 10; i++ {
 		time.Sleep(1 * time.Second)
