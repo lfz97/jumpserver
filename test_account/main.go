@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 
@@ -21,29 +20,30 @@ func main() {
 		os.Exit(1)
 	}
 
-	baseURL := url + "/api/v1/perms/asset-permissions/"
-
-	// 加 limit=1 强制分页对象返回
-	tests := []string{
-		"?limit=1&offset=0",
-		"?limit=1&offset=0&is_expired=true",
-		"?limit=1&offset=0&is_expired=false",
+	// 搜索 test_delete 授权关系
+	fmt.Println("========== 搜索 test_delete ==========")
+	permissions, err := client.GetALLAssetPermissions(map[string]string{
+		"name": "test_delete",
+	})
+	if err != nil {
+		fmt.Printf("❌ 查询失败: %v\n", err)
+		os.Exit(1)
 	}
 
-	for _, q := range tests {
-		resp, _ := client.JMSClient_p.R().Get(baseURL + q)
-
-		firstChar := resp.Body()[0]
-		if firstChar == '[' {
-			var arr []json.RawMessage
-			json.Unmarshal(resp.Body(), &arr)
-			fmt.Printf("%-45s  格式=数组  条数=%d\n", q, len(arr))
-		} else {
-			var result struct {
-				Count int `json:"count"`
-			}
-			json.Unmarshal(resp.Body(), &result)
-			fmt.Printf("%-45s  格式=对象  count=%d\n", q, result.Count)
-		}
+	if len(*permissions) == 0 {
+		fmt.Println("❌ 未找到 test_delete 授权关系")
+		os.Exit(1)
 	}
+
+	target := (*permissions)[0]
+	fmt.Printf("找到: ID=%s  Name=%s\n\n", target.ID, target.Name)
+
+	// 删除
+	fmt.Println("========== 删除 test_delete ==========")
+	err = client.DeletePermission(target.ID)
+	if err != nil {
+		fmt.Printf("❌ 删除失败: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Printf("✅ 已删除: %s (%s)\n", target.Name, target.ID)
 }

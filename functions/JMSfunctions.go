@@ -364,6 +364,23 @@ func (J_p *JMSClient) UpdatePermission(config PermissionConfig, permissionID str
 	return &Result, nil
 }
 
+// 根据授权关系ID删除授权关系
+func (J_p *JMSClient) DeletePermission(permissionID string) error {
+
+	url := fmt.Sprintf("%s/api/v1/perms/asset-permissions/%s/", (*J_p).Url, permissionID)
+	headers := map[string]string{
+		"Content-Type": "application/json",
+	}
+	res_p, err := (*J_p).JMSClient_p.R().SetHeaders(headers).Delete(url)
+	if err != nil {
+		return err
+	}
+	if res_p.StatusCode() != 204 {
+		return errors.New("删除授权关系失败，状态码：" + strconv.Itoa(res_p.StatusCode()) + "，响应：" + string(res_p.Body()))
+	}
+	return nil
+}
+
 // 获取资产特定账号信息，assetid为资产id，username为账号名
 func (J_p *JMSClient) GetSpecifiedAccount(assetid string, username string) (*(models.AccountList), error) {
 
