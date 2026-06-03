@@ -92,6 +92,7 @@ func (J_p *JMSClient) GetAssetsByNodeID(Nid string, currentAsset bool) (*(models
 		"Content-Type": "application/json",
 	}
 
+	// 兼容两种返回格式：带 limit/offset 时分页对象，不带时纯数组
 	for offset := 0; ; offset += pageSize {
 		url, err := utils.ParseUrl((*J_p).Url+"/api/v1/assets/assets/", map[string]string{
 			"node_id":            Nid,
@@ -109,15 +110,18 @@ func (J_p *JMSClient) GetAssetsByNodeID(Nid string, currentAsset bool) (*(models
 		if res_p.StatusCode() != 200 {
 			return nil, errors.New("查询节点资产失败，状态码：" + strconv.Itoa(res_p.StatusCode()))
 		}
-		pageResult := models.AssetsListResult{}
-		err = json.Unmarshal(res_p.Body(), &pageResult)
-		if err != nil {
+		pageList := models.AssetsListPaginated{}
+		var arr models.AssetsListResult
+		if err := json.Unmarshal(res_p.Body(), &arr); err == nil {
+			allAssets = append(allAssets, arr...)
+			break // 数组格式说明返回了全量数据
+		} else if err := json.Unmarshal(res_p.Body(), &pageList); err == nil {
+			allAssets = append(allAssets, pageList.Results...)
+			if len(pageList.Results) < pageSize {
+				break
+			}
+		} else {
 			return nil, err
-		}
-		allAssets = append(allAssets, pageResult...)
-
-		if len(pageResult) < pageSize {
-			break
 		}
 	}
 
@@ -137,6 +141,7 @@ func (J_p *JMSClient) GetUserAssetsListByUid(Uid string) (*(models.AssetsListRes
 		"Content-Type": "application/json",
 	}
 
+	// 兼容两种返回格式：带 limit/offset 时分页对象，不带时纯数组
 	for offset := 0; ; offset += pageSize {
 		url, err := utils.ParseUrl(fmt.Sprintf("%s/api/v1/perms/users/%s/assets/", (*J_p).Url, Uid), map[string]string{
 			"limit":  strconv.Itoa(pageSize),
@@ -152,15 +157,18 @@ func (J_p *JMSClient) GetUserAssetsListByUid(Uid string) (*(models.AssetsListRes
 		if res_p.StatusCode() != 200 {
 			return nil, errors.New("查询用户授权资产失败，状态码：" + strconv.Itoa(res_p.StatusCode()))
 		}
-		pageResult := models.AssetsListResult{}
-		err = json.Unmarshal(res_p.Body(), &pageResult)
-		if err != nil {
+		pageList := models.AssetsListPaginated{}
+		var arr models.AssetsListResult
+		if err := json.Unmarshal(res_p.Body(), &arr); err == nil {
+			allAssets = append(allAssets, arr...)
+			break // 数组格式说明返回了全量数据
+		} else if err := json.Unmarshal(res_p.Body(), &pageList); err == nil {
+			allAssets = append(allAssets, pageList.Results...)
+			if len(pageList.Results) < pageSize {
+				break
+			}
+		} else {
 			return nil, err
-		}
-		allAssets = append(allAssets, pageResult...)
-
-		if len(pageResult) < pageSize {
-			break
 		}
 	}
 
@@ -180,6 +188,7 @@ func (J_p *JMSClient) GetAllAssets() (*(models.AssetsListResult), error) {
 		"Content-Type": "application/json",
 	}
 
+	// 兼容两种返回格式：带 limit/offset 时分页对象，不带时纯数组
 	for offset := 0; ; offset += pageSize {
 		url, err := utils.ParseUrl((*J_p).Url+"/api/v1/assets/assets/", map[string]string{
 			"limit":  strconv.Itoa(pageSize),
@@ -195,15 +204,18 @@ func (J_p *JMSClient) GetAllAssets() (*(models.AssetsListResult), error) {
 		if res_p.StatusCode() != 200 {
 			return nil, errors.New("查询所有资产失败，状态码：" + strconv.Itoa(res_p.StatusCode()))
 		}
-		pageResult := models.AssetsListResult{}
-		err = json.Unmarshal(res_p.Body(), &pageResult)
-		if err != nil {
+		pageList := models.AssetsListPaginated{}
+		var arr models.AssetsListResult
+		if err := json.Unmarshal(res_p.Body(), &arr); err == nil {
+			allAssets = append(allAssets, arr...)
+			break // 数组格式说明返回了全量数据
+		} else if err := json.Unmarshal(res_p.Body(), &pageList); err == nil {
+			allAssets = append(allAssets, pageList.Results...)
+			if len(pageList.Results) < pageSize {
+				break
+			}
+		} else {
 			return nil, err
-		}
-		allAssets = append(allAssets, pageResult...)
-
-		if len(pageResult) < pageSize {
-			break
 		}
 	}
 
@@ -222,6 +234,7 @@ func (J_p *JMSClient) GetAssetByIP(IP string) (*(models.AssetsListResult), error
 		"Content-Type": "application/json",
 	}
 
+	// 兼容两种返回格式：带 limit/offset 时分页对象，不带时纯数组
 	for offset := 0; ; offset += pageSize {
 		url, err := utils.ParseUrl((*J_p).Url+"/api/v1/assets/assets/", map[string]string{
 			"address": IP,
@@ -238,15 +251,18 @@ func (J_p *JMSClient) GetAssetByIP(IP string) (*(models.AssetsListResult), error
 		if res_p.StatusCode() != 200 {
 			return nil, errors.New("查询资产失败，状态码：" + strconv.Itoa(res_p.StatusCode()))
 		}
-		pageResult := models.AssetsListResult{}
-		err = json.Unmarshal(res_p.Body(), &pageResult)
-		if err != nil {
+		pageList := models.AssetsListPaginated{}
+		var arr models.AssetsListResult
+		if err := json.Unmarshal(res_p.Body(), &arr); err == nil {
+			allAssets = append(allAssets, arr...)
+			break // 数组格式说明返回了全量数据
+		} else if err := json.Unmarshal(res_p.Body(), &pageList); err == nil {
+			allAssets = append(allAssets, pageList.Results...)
+			if len(pageList.Results) < pageSize {
+				break
+			}
+		} else {
 			return nil, err
-		}
-		allAssets = append(allAssets, pageResult...)
-
-		if len(pageResult) < pageSize {
-			break
 		}
 	}
 
@@ -265,6 +281,7 @@ func (J_p *JMSClient) GetAssetByName(Name string) (*(models.AssetsListResult), e
 		"Content-Type": "application/json",
 	}
 
+	// 兼容两种返回格式：带 limit/offset 时分页对象，不带时纯数组
 	for offset := 0; ; offset += pageSize {
 		url, err := utils.ParseUrl((*J_p).Url+"/api/v1/assets/assets/", map[string]string{
 			"name":   Name,
@@ -281,15 +298,18 @@ func (J_p *JMSClient) GetAssetByName(Name string) (*(models.AssetsListResult), e
 		if res_p.StatusCode() != 200 {
 			return nil, errors.New("查询资产失败，状态码：" + strconv.Itoa(res_p.StatusCode()))
 		}
-		pageResult := models.AssetsListResult{}
-		err = json.Unmarshal(res_p.Body(), &pageResult)
-		if err != nil {
+		pageList := models.AssetsListPaginated{}
+		var arr models.AssetsListResult
+		if err := json.Unmarshal(res_p.Body(), &arr); err == nil {
+			allAssets = append(allAssets, arr...)
+			break // 数组格式说明返回了全量数据
+		} else if err := json.Unmarshal(res_p.Body(), &pageList); err == nil {
+			allAssets = append(allAssets, pageList.Results...)
+			if len(pageList.Results) < pageSize {
+				break
+			}
+		} else {
 			return nil, err
-		}
-		allAssets = append(allAssets, pageResult...)
-
-		if len(pageResult) < pageSize {
-			break
 		}
 	}
 
@@ -308,6 +328,7 @@ func (J_p *JMSClient) GetAssetPermissionByName(permissionName string) (*(models.
 		"Content-Type": "application/json",
 	}
 
+	// 兼容两种返回格式：带 limit/offset 时分页对象，不带时纯数组
 	for offset := 0; ; offset += pageSize {
 		url, err := utils.ParseUrl((*J_p).Url+"/api/v1/perms/asset-permissions/", map[string]string{
 			"name":   permissionName,
@@ -324,15 +345,18 @@ func (J_p *JMSClient) GetAssetPermissionByName(permissionName string) (*(models.
 		if res_p.StatusCode() != 200 {
 			return nil, errors.New("查询授权关系失败，状态码：" + strconv.Itoa(res_p.StatusCode()))
 		}
-		pageResult := models.PermissionList{}
-		err = json.Unmarshal(res_p.Body(), &pageResult)
-		if err != nil {
+		pageList := models.PermissionListPaginated{}
+		var arr models.PermissionList
+		if err := json.Unmarshal(res_p.Body(), &arr); err == nil {
+			allPermissions = append(allPermissions, arr...)
+			break // 数组格式说明返回了全量数据
+		} else if err := json.Unmarshal(res_p.Body(), &pageList); err == nil {
+			allPermissions = append(allPermissions, pageList.Results...)
+			if len(pageList.Results) < pageSize {
+				break
+			}
+		} else {
 			return nil, err
-		}
-		allPermissions = append(allPermissions, pageResult...)
-
-		if len(pageResult) < pageSize {
-			break
 		}
 	}
 

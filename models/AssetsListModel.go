@@ -17,3 +17,10 @@ type AssetInfo struct {
 }
 
 type AssetsListResult []AssetInfo
+
+type AssetsListPaginated struct {
+	Count    int         `json:"count"`
+	Next     interface{} `json:"next"`
+	Previous interface{} `json:"previous"`
+	Results  []AssetInfo `json:"results"`
+}
