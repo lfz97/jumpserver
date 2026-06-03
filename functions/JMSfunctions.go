@@ -75,7 +75,7 @@ func (J_p *JMSClient) GetAssetNodeByFullValue(fullValue string) (*(models.AssetN
 	return &Result, nil
 }
 
-// 根据节点id获取节点中的资产
+// 根据节点id获取节点中的资产（自动分页拉取）
 func (J_p *JMSClient) GetAssetsByNodeID(Nid string, currentAsset bool) (*(models.AssetsListResult), error) {
 
 	//设置是否仅显示当前节点资产
@@ -86,175 +86,260 @@ func (J_p *JMSClient) GetAssetsByNodeID(Nid string, currentAsset bool) (*(models
 	} else {
 	}
 
-	url, err := utils.ParseUrl((*J_p).Url+"/api/v1/assets/assets/", map[string]string{
-		"node_id":            Nid,
-		"show_current_asset": strconv.Itoa(show_current_asset),
-	})
-	if err != nil {
-		return nil, err
-	}
+	pageSize := 1000
+	allAssets := models.AssetsListResult{}
 	headers := map[string]string{
 		"Content-Type": "application/json",
 	}
-	res_p, err := (*J_p).JMSClient_p.R().SetHeaders(headers).Get(url)
-	if err != nil {
-		return nil, err
+
+	for offset := 0; ; offset += pageSize {
+		url, err := utils.ParseUrl((*J_p).Url+"/api/v1/assets/assets/", map[string]string{
+			"node_id":            Nid,
+			"show_current_asset": strconv.Itoa(show_current_asset),
+			"limit":              strconv.Itoa(pageSize),
+			"offset":             strconv.Itoa(offset),
+		})
+		if err != nil {
+			return nil, err
+		}
+		res_p, err := (*J_p).JMSClient_p.R().SetHeaders(headers).Get(url)
+		if err != nil {
+			return nil, err
+		}
+		if res_p.StatusCode() != 200 {
+			return nil, errors.New("查询节点资产失败，状态码：" + strconv.Itoa(res_p.StatusCode()))
+		}
+		pageResult := models.AssetsListResult{}
+		err = json.Unmarshal(res_p.Body(), &pageResult)
+		if err != nil {
+			return nil, err
+		}
+		allAssets = append(allAssets, pageResult...)
+
+		if len(pageResult) < pageSize {
+			break
+		}
 	}
-	if res_p.StatusCode() != 200 {
-		return nil, errors.New("查询节点资产失败，状态码：" + strconv.Itoa(res_p.StatusCode()))
-	}
-	Result := models.AssetsListResult{}
-	err = json.Unmarshal(res_p.Body(), &Result)
-	if err != nil {
-		return nil, err
-	}
-	if len(Result) == 0 {
+
+	if len(allAssets) == 0 {
 		return nil, errors.New("本节点无资产：" + Nid)
 	}
 
-	return &Result, nil
+	return &allAssets, nil
 }
 
-// 根据用户id获取用户所有已授权的资产
+// 根据用户id获取用户所有已授权的资产（自动分页拉取）
 func (J_p *JMSClient) GetUserAssetsListByUid(Uid string) (*(models.AssetsListResult), error) {
 
-	url := fmt.Sprintf("%s/api/v1/perms/users/%s/assets/", (*J_p).Url, Uid)
-
+	pageSize := 1000
+	allAssets := models.AssetsListResult{}
 	headers := map[string]string{
 		"Content-Type": "application/json",
 	}
-	res_p, err := (*J_p).JMSClient_p.R().SetHeaders(headers).Get(url)
-	if err != nil {
-		return nil, err
+
+	for offset := 0; ; offset += pageSize {
+		url, err := utils.ParseUrl(fmt.Sprintf("%s/api/v1/perms/users/%s/assets/", (*J_p).Url, Uid), map[string]string{
+			"limit":  strconv.Itoa(pageSize),
+			"offset": strconv.Itoa(offset),
+		})
+		if err != nil {
+			return nil, err
+		}
+		res_p, err := (*J_p).JMSClient_p.R().SetHeaders(headers).Get(url)
+		if err != nil {
+			return nil, err
+		}
+		if res_p.StatusCode() != 200 {
+			return nil, errors.New("查询用户授权资产失败，状态码：" + strconv.Itoa(res_p.StatusCode()))
+		}
+		pageResult := models.AssetsListResult{}
+		err = json.Unmarshal(res_p.Body(), &pageResult)
+		if err != nil {
+			return nil, err
+		}
+		allAssets = append(allAssets, pageResult...)
+
+		if len(pageResult) < pageSize {
+			break
+		}
 	}
-	if res_p.StatusCode() != 200 {
-		return nil, errors.New("查询用户授权资产失败，状态码：" + strconv.Itoa(res_p.StatusCode()))
-	}
-	result := models.AssetsListResult{}
-	err = json.Unmarshal(res_p.Body(), &result)
-	if err != nil {
-		return nil, err
-	}
-	if len(result) == 0 {
+
+	if len(allAssets) == 0 {
 		return nil, errors.New("未查询到用户授权资产，Uid: " + Uid)
 	}
 
-	return &result, nil
+	return &allAssets, nil
 }
 
-// 获取所有资产
+// 获取所有资产（自动分页拉取）
 func (J_p *JMSClient) GetAllAssets() (*(models.AssetsListResult), error) {
 
-	url, err := utils.ParseUrl((*J_p).Url+"/api/v1/assets/assets/", map[string]string{})
-	if err != nil {
-		return nil, err
-	}
+	pageSize := 1000
+	allAssets := models.AssetsListResult{}
 	headers := map[string]string{
 		"Content-Type": "application/json",
 	}
-	res_p, err := (*J_p).JMSClient_p.R().SetHeaders(headers).Get(url)
-	if err != nil {
-		return nil, err
+
+	for offset := 0; ; offset += pageSize {
+		url, err := utils.ParseUrl((*J_p).Url+"/api/v1/assets/assets/", map[string]string{
+			"limit":  strconv.Itoa(pageSize),
+			"offset": strconv.Itoa(offset),
+		})
+		if err != nil {
+			return nil, err
+		}
+		res_p, err := (*J_p).JMSClient_p.R().SetHeaders(headers).Get(url)
+		if err != nil {
+			return nil, err
+		}
+		if res_p.StatusCode() != 200 {
+			return nil, errors.New("查询所有资产失败，状态码：" + strconv.Itoa(res_p.StatusCode()))
+		}
+		pageResult := models.AssetsListResult{}
+		err = json.Unmarshal(res_p.Body(), &pageResult)
+		if err != nil {
+			return nil, err
+		}
+		allAssets = append(allAssets, pageResult...)
+
+		if len(pageResult) < pageSize {
+			break
+		}
 	}
-	if res_p.StatusCode() != 200 {
-		return nil, errors.New("查询所有资产失败，状态码：" + strconv.Itoa(res_p.StatusCode()))
-	}
-	result := models.AssetsListResult{}
-	err = json.Unmarshal(res_p.Body(), &result)
-	if err != nil {
-		return nil, err
-	}
-	if len(result) == 0 {
+
+	if len(allAssets) == 0 {
 		return nil, errors.New("无资产: ")
 	}
-	return &result, nil
+	return &allAssets, nil
 }
 
-// 根据IP地址查询资产
+// 根据IP地址查询资产（自动分页拉取）
 func (J_p *JMSClient) GetAssetByIP(IP string) (*(models.AssetsListResult), error) {
-	url, err := utils.ParseUrl((*J_p).Url+"/api/v1/assets/assets/", map[string]string{
-		"address": IP,
-	})
-	if err != nil {
-		return nil, err
-	}
+
+	pageSize := 1000
+	allAssets := models.AssetsListResult{}
 	headers := map[string]string{
 		"Content-Type": "application/json",
 	}
-	res_p, err := (*J_p).JMSClient_p.R().SetHeaders(headers).Get(url)
-	if err != nil {
-		return nil, err
+
+	for offset := 0; ; offset += pageSize {
+		url, err := utils.ParseUrl((*J_p).Url+"/api/v1/assets/assets/", map[string]string{
+			"address": IP,
+			"limit":   strconv.Itoa(pageSize),
+			"offset":  strconv.Itoa(offset),
+		})
+		if err != nil {
+			return nil, err
+		}
+		res_p, err := (*J_p).JMSClient_p.R().SetHeaders(headers).Get(url)
+		if err != nil {
+			return nil, err
+		}
+		if res_p.StatusCode() != 200 {
+			return nil, errors.New("查询资产失败，状态码：" + strconv.Itoa(res_p.StatusCode()))
+		}
+		pageResult := models.AssetsListResult{}
+		err = json.Unmarshal(res_p.Body(), &pageResult)
+		if err != nil {
+			return nil, err
+		}
+		allAssets = append(allAssets, pageResult...)
+
+		if len(pageResult) < pageSize {
+			break
+		}
 	}
-	if res_p.StatusCode() != 200 {
-		return nil, errors.New("查询资产失败，状态码：" + strconv.Itoa(res_p.StatusCode()))
-	}
-	Result := models.AssetsListResult{}
-	err = json.Unmarshal(res_p.Body(), &Result)
-	if err != nil {
-		return nil, err
-	}
-	if len(Result) == 0 {
+
+	if len(allAssets) == 0 {
 		return nil, errors.New("未查询到资产: " + IP)
 	}
-	return &Result, nil
+	return &allAssets, nil
 }
 
-// 根据名称查询资产
+// 根据名称查询资产（自动分页拉取）
 func (J_p *JMSClient) GetAssetByName(Name string) (*(models.AssetsListResult), error) {
-	url, err := utils.ParseUrl((*J_p).Url+"/api/v1/assets/assets/", map[string]string{
-		"name": Name,
-	})
-	if err != nil {
-		return nil, err
-	}
+
+	pageSize := 1000
+	allAssets := models.AssetsListResult{}
 	headers := map[string]string{
 		"Content-Type": "application/json",
 	}
-	res_p, err := (*J_p).JMSClient_p.R().SetHeaders(headers).Get(url)
-	if err != nil {
-		return nil, err
+
+	for offset := 0; ; offset += pageSize {
+		url, err := utils.ParseUrl((*J_p).Url+"/api/v1/assets/assets/", map[string]string{
+			"name":   Name,
+			"limit":  strconv.Itoa(pageSize),
+			"offset": strconv.Itoa(offset),
+		})
+		if err != nil {
+			return nil, err
+		}
+		res_p, err := (*J_p).JMSClient_p.R().SetHeaders(headers).Get(url)
+		if err != nil {
+			return nil, err
+		}
+		if res_p.StatusCode() != 200 {
+			return nil, errors.New("查询资产失败，状态码：" + strconv.Itoa(res_p.StatusCode()))
+		}
+		pageResult := models.AssetsListResult{}
+		err = json.Unmarshal(res_p.Body(), &pageResult)
+		if err != nil {
+			return nil, err
+		}
+		allAssets = append(allAssets, pageResult...)
+
+		if len(pageResult) < pageSize {
+			break
+		}
 	}
-	if res_p.StatusCode() != 200 {
-		return nil, errors.New("查询资产失败，状态码：" + strconv.Itoa(res_p.StatusCode()))
-	}
-	Result := models.AssetsListResult{}
-	err = json.Unmarshal(res_p.Body(), &Result)
-	if err != nil {
-		return nil, err
-	}
-	if len(Result) == 0 {
+
+	if len(allAssets) == 0 {
 		return nil, errors.New("未查询到资产: " + Name)
 	}
-	return &Result, nil
+	return &allAssets, nil
 }
 
-// 根据授权关系名称查询授权关系
+// 根据授权关系名称查询授权关系（自动分页拉取）
 func (J_p *JMSClient) GetAssetPermissionByName(permissionName string) (*(models.PermissionList), error) {
-	url, err := utils.ParseUrl((*J_p).Url+"/api/v1/perms/asset-permissions/", map[string]string{
-		"name": permissionName,
-	})
-	if err != nil {
-		return nil, err
-	}
+
+	pageSize := 1000
+	allPermissions := models.PermissionList{}
 	headers := map[string]string{
 		"Content-Type": "application/json",
 	}
-	res_p, err := (*J_p).JMSClient_p.R().SetHeaders(headers).Get(url)
-	if err != nil {
-		return nil, err
+
+	for offset := 0; ; offset += pageSize {
+		url, err := utils.ParseUrl((*J_p).Url+"/api/v1/perms/asset-permissions/", map[string]string{
+			"name":   permissionName,
+			"limit":  strconv.Itoa(pageSize),
+			"offset": strconv.Itoa(offset),
+		})
+		if err != nil {
+			return nil, err
+		}
+		res_p, err := (*J_p).JMSClient_p.R().SetHeaders(headers).Get(url)
+		if err != nil {
+			return nil, err
+		}
+		if res_p.StatusCode() != 200 {
+			return nil, errors.New("查询授权关系失败，状态码：" + strconv.Itoa(res_p.StatusCode()))
+		}
+		pageResult := models.PermissionList{}
+		err = json.Unmarshal(res_p.Body(), &pageResult)
+		if err != nil {
+			return nil, err
+		}
+		allPermissions = append(allPermissions, pageResult...)
+
+		if len(pageResult) < pageSize {
+			break
+		}
 	}
-	if res_p.StatusCode() != 200 {
-		return nil, errors.New("查询授权关系失败，状态码：" + strconv.Itoa(res_p.StatusCode()))
-	}
-	Result := models.PermissionList{}
-	err = json.Unmarshal(res_p.Body(), &Result)
-	if err != nil {
-		return nil, err
-	}
-	if len(Result) == 0 {
+
+	if len(allPermissions) == 0 {
 		return nil, errors.New("未找到此授权关系：" + permissionName)
 	}
-	return &Result, nil
+	return &allPermissions, nil
 }
 
 // 根据授权id获取授权详细信息
