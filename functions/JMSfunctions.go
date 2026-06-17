@@ -42,6 +42,29 @@ func (J_p *JMSClient) GetUserByName(Name string) (*(models.UserList), error) {
 	return &result, nil
 }
 
+// 创建堡垒机用户
+// 必填参数：Name、Username、Email、SystemRoles、OrgRoles
+// 密码策略：PasswordStrategy="email" 通过邮件设置密码；PasswordStrategy="custom" 使用 Password 字段
+func (J_p *JMSClient) CreateUser(req models.CreateUserRequest) (*models.UserInfo, error) {
+
+	url := (*J_p).Url + "/api/v1/users/users/"
+	headers := map[string]string{
+		"Content-Type": "application/json",
+	}
+	res_p, err := (*J_p).JMSClient_p.R().SetHeaders(headers).SetBody(req).Post(url)
+	if err != nil {
+		return nil, err
+	}
+	if res_p.StatusCode() != 201 {
+		return nil, errors.New("创建用户失败，状态码：" + strconv.Itoa(res_p.StatusCode()) + "，响应：" + string(res_p.Body()))
+	}
+	var result models.UserInfo
+	if err := json.Unmarshal(res_p.Body(), &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
 // 根据节点full_value获取节点及子节点信息
 func (J_p *JMSClient) GetAssetNodeByFullValue(fullValue string) (*(models.AssetNodeList), error) {
 

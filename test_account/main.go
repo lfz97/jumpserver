@@ -1,10 +1,14 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"math/rand"
 	"os"
+	"time"
 
 	"github.com/lfz97/jumpserver"
+	"github.com/lfz97/jumpserver/models"
 )
 
 func main() {
@@ -20,30 +24,41 @@ func main() {
 		os.Exit(1)
 	}
 
-	// 搜索 test_delete 授权关系
-	fmt.Println("========== 搜索 test_delete ==========")
-	permissions, err := client.GetALLAssetPermissions(map[string]string{
-		"name": "test_delete",
-	})
+	// 生成随机后缀避免用户名冲突
+	rand.Seed(time.Now().UnixNano())
+	suffix := fmt.Sprintf("%04d", rand.Intn(10000))
+	testName := fmt.Sprintf("fan.zhou_%s", suffix)
+	testUsername := fmt.Sprintf("v-fan.zhou_%s", suffix)
+	testEmail := fmt.Sprintf("v-fan.zhou_%s@freemud.com", suffix)
+
+	mfaLevel := 0
+	req := models.CreateUserRequest{
+		Name:             testName,
+		Username:         testUsername,
+		Email:            testEmail,
+		PasswordStrategy: "email",
+		Source:           "radius",
+		MfaLevel:         &mfaLevel,
+		DateExpired:      "2096-01-17T15:32:11.000+0800",
+		Comment:          "freemud",
+		SystemRoles: []models.RoleParam{
+			{PK: "00000000-0000-0000-0000-000000000003"},
+		},
+		OrgRoles: []models.RoleParam{
+			{PK: "00000000-0000-0000-0000-000000000007"},
+		},
+	}
+
+	fmt.Printf("测试用户名: %s / %s / %s\n", testName, testUsername, testEmail)
+
+	fmt.Println("========== 创建用户 ==========")
+	user, err := client.CreateUser(req)
 	if err != nil {
-		fmt.Printf("❌ 查询失败: %v\n", err)
+		fmt.Printf("❌ 创建失败: %v\n", err)
 		os.Exit(1)
 	}
 
-	if len(*permissions) == 0 {
-		fmt.Println("❌ 未找到 test_delete 授权关系")
-		os.Exit(1)
-	}
-
-	target := (*permissions)[0]
-	fmt.Printf("找到: ID=%s  Name=%s\n\n", target.ID, target.Name)
-
-	// 删除
-	fmt.Println("========== 删除 test_delete ==========")
-	err = client.DeletePermission(target.ID)
-	if err != nil {
-		fmt.Printf("❌ 删除失败: %v\n", err)
-		os.Exit(1)
-	}
-	fmt.Printf("✅ 已删除: %s (%s)\n", target.Name, target.ID)
+	// 美化输出
+	out, _ := json.MarshalIndent(user, "", "  ")
+	fmt.Printf("✅ 创建成功:\n%s\n", string(out))
 }
